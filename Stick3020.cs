@@ -12,7 +12,7 @@ class Stick3020: Form
 		Application.Run(new Stick3020());
 	}
 
-	private const int fontSize = 16, gridSize = 22;
+	private const int fontSize = 16, gridSize = 24;
 
 	private static Size GetSizeOnGrid(float width, float height)
 	{
