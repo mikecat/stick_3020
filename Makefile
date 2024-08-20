@@ -7,7 +7,9 @@ OPTIONS= \
 	/reference:TrainCrewInput.dll
 
 SOURCES= \
-	Stick3020.cs
+	Stick3020.cs \
+	UItext.cs \
+	JapaneseUIText.cs
 
 $(TARGET): $(SOURCES)
 	csc /out:$@ $(OPTIONS) $^
