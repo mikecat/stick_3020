@@ -61,10 +61,10 @@ class Stick3020: Form
 	private GroupBox inputConfigurationGroupBox;
 	private Label stickThresholdTitleLabel, stickThresholdUnitLabel;
 	private NumericUpDown stickThresholdNumericUpDown;
-	private Label trigterShallowThresholdTitleLabel, trigterShallowThresholdUnitLabel;
-	private NumericUpDown trigterShallowThresholdNumericUpDown;
-	private Label trigterDeepThresholdTitleLabel, trigterDeepThresholdUnitLabel;
-	private NumericUpDown trigterDeepThresholdNumericUpDown;
+	private Label triggerShallowThresholdTitleLabel, triggerShallowThresholdUnitLabel;
+	private NumericUpDown triggerShallowThresholdNumericUpDown;
+	private Label triggerDeepThresholdTitleLabel, triggerDeepThresholdUnitLabel;
+	private NumericUpDown triggerDeepThresholdNumericUpDown;
 	private Label notchHysteresisTitleLabel, notchHysteresisUnitLabel;
 	private NumericUpDown notchHysteresisNumericUpDown;
 	private CheckBox enableDeadmanCheckBox;
@@ -149,24 +149,24 @@ class Stick3020: Form
 		stickThresholdNumericUpDown.Increment = 1;
 		stickThresholdUnitLabel = CreateControl<Label>(inputConfigurationGroupBox, 10.5f, 1, 1, 1);
 		stickThresholdUnitLabel.Text = "%";
-		trigterShallowThresholdTitleLabel = CreateControl<Label>(inputConfigurationGroupBox, 0.5f, 2, 6, 1);
-		trigterShallowThresholdNumericUpDown = CreateControl<NumericUpDown>(inputConfigurationGroupBox, 6.5f, 2, 4, 1);
-		trigterShallowThresholdNumericUpDown.Maximum = 80;
-		trigterShallowThresholdNumericUpDown.Minimum = 0;
-		trigterShallowThresholdNumericUpDown.Value = 30;
-		trigterShallowThresholdNumericUpDown.Increment = 1;
-		trigterShallowThresholdNumericUpDown.ValueChanged += TriggerThresholdChangeHandler;
-		trigterShallowThresholdUnitLabel = CreateControl<Label>(inputConfigurationGroupBox, 10.5f, 2, 1, 1);
-		trigterShallowThresholdUnitLabel.Text = "%";
-		trigterDeepThresholdTitleLabel = CreateControl<Label>(inputConfigurationGroupBox, 0.5f, 3, 6, 1);
-		trigterDeepThresholdNumericUpDown = CreateControl<NumericUpDown>(inputConfigurationGroupBox, 6.5f, 3, 4, 1);
-		trigterDeepThresholdNumericUpDown.Maximum = 100;
-		trigterDeepThresholdNumericUpDown.Minimum = 30;
-		trigterDeepThresholdNumericUpDown.Value = 80;
-		trigterDeepThresholdNumericUpDown.Increment = 1;
-		trigterDeepThresholdNumericUpDown.ValueChanged += TriggerThresholdChangeHandler;
-		trigterDeepThresholdUnitLabel = CreateControl<Label>(inputConfigurationGroupBox, 10.5f, 3, 1, 1);
-		trigterDeepThresholdUnitLabel.Text = "%";
+		triggerShallowThresholdTitleLabel = CreateControl<Label>(inputConfigurationGroupBox, 0.5f, 2, 6, 1);
+		triggerShallowThresholdNumericUpDown = CreateControl<NumericUpDown>(inputConfigurationGroupBox, 6.5f, 2, 4, 1);
+		triggerShallowThresholdNumericUpDown.Maximum = 80;
+		triggerShallowThresholdNumericUpDown.Minimum = 0;
+		triggerShallowThresholdNumericUpDown.Value = 30;
+		triggerShallowThresholdNumericUpDown.Increment = 1;
+		triggerShallowThresholdNumericUpDown.ValueChanged += TriggerThresholdChangeHandler;
+		triggerShallowThresholdUnitLabel = CreateControl<Label>(inputConfigurationGroupBox, 10.5f, 2, 1, 1);
+		triggerShallowThresholdUnitLabel.Text = "%";
+		triggerDeepThresholdTitleLabel = CreateControl<Label>(inputConfigurationGroupBox, 0.5f, 3, 6, 1);
+		triggerDeepThresholdNumericUpDown = CreateControl<NumericUpDown>(inputConfigurationGroupBox, 6.5f, 3, 4, 1);
+		triggerDeepThresholdNumericUpDown.Maximum = 100;
+		triggerDeepThresholdNumericUpDown.Minimum = 30;
+		triggerDeepThresholdNumericUpDown.Value = 80;
+		triggerDeepThresholdNumericUpDown.Increment = 1;
+		triggerDeepThresholdNumericUpDown.ValueChanged += TriggerThresholdChangeHandler;
+		triggerDeepThresholdUnitLabel = CreateControl<Label>(inputConfigurationGroupBox, 10.5f, 3, 1, 1);
+		triggerDeepThresholdUnitLabel.Text = "%";
 		notchHysteresisTitleLabel = CreateControl<Label>(inputConfigurationGroupBox, 0.5f, 4, 6, 1);
 		notchHysteresisNumericUpDown = CreateControl<NumericUpDown>(inputConfigurationGroupBox, 6.5f, 4, 4, 1);
 		notchHysteresisNumericUpDown.Maximum = 100;
@@ -219,8 +219,8 @@ class Stick3020: Form
 
 		inputConfigurationGroupBox.Text = uiText.InputConfiguration;
 		stickThresholdTitleLabel.Text = uiText.InputStickThreshold;
-		trigterShallowThresholdTitleLabel.Text = uiText.InputTriggerThresholdShallow;
-		trigterDeepThresholdTitleLabel.Text = uiText.InputTriggerThresholdDeep;
+		triggerShallowThresholdTitleLabel.Text = uiText.InputTriggerThresholdShallow;
+		triggerDeepThresholdTitleLabel.Text = uiText.InputTriggerThresholdDeep;
 		notchHysteresisTitleLabel.Text = uiText.InputNotchHysteresis;
 		enableDeadmanCheckBox.Text = uiText.InputDeadman;
 	}
@@ -244,8 +244,8 @@ class Stick3020: Form
 
 	private void TriggerThresholdChangeHandler(object sender, EventArgs e)
 	{
-		trigterDeepThresholdNumericUpDown.Minimum = trigterShallowThresholdNumericUpDown.Value;
-		trigterShallowThresholdNumericUpDown.Maximum = trigterDeepThresholdNumericUpDown.Value;
+		triggerDeepThresholdNumericUpDown.Minimum = triggerShallowThresholdNumericUpDown.Value;
+		triggerShallowThresholdNumericUpDown.Maximum = triggerDeepThresholdNumericUpDown.Value;
 	}
 
 	private Timer inputTimer, controllerCheckTimer;
