@@ -155,6 +155,7 @@ class Stick3020: Form
 		trigterShallowThresholdNumericUpDown.Minimum = 0;
 		trigterShallowThresholdNumericUpDown.Value = 30;
 		trigterShallowThresholdNumericUpDown.Increment = 1;
+		trigterShallowThresholdNumericUpDown.ValueChanged += TriggerThresholdChangeHandler;
 		trigterShallowThresholdUnitLabel = CreateControl<Label>(inputConfigurationGroupBox, 10.5f, 2, 1, 1);
 		trigterShallowThresholdUnitLabel.Text = "%";
 		trigterDeepThresholdTitleLabel = CreateControl<Label>(inputConfigurationGroupBox, 0.5f, 3, 6, 1);
@@ -163,6 +164,7 @@ class Stick3020: Form
 		trigterDeepThresholdNumericUpDown.Minimum = 30;
 		trigterDeepThresholdNumericUpDown.Value = 80;
 		trigterDeepThresholdNumericUpDown.Increment = 1;
+		trigterDeepThresholdNumericUpDown.ValueChanged += TriggerThresholdChangeHandler;
 		trigterDeepThresholdUnitLabel = CreateControl<Label>(inputConfigurationGroupBox, 10.5f, 3, 1, 1);
 		trigterDeepThresholdUnitLabel.Text = "%";
 		notchHysteresisTitleLabel = CreateControl<Label>(inputConfigurationGroupBox, 0.5f, 4, 6, 1);
@@ -229,5 +231,11 @@ class Stick3020: Form
 			uiText = new EnglishUIText();
 		}
 		SetControlTexts();
+	}
+
+	private void TriggerThresholdChangeHandler(object sender, EventArgs e)
+	{
+		trigterDeepThresholdNumericUpDown.Minimum = trigterShallowThresholdNumericUpDown.Value;
+		trigterShallowThresholdNumericUpDown.Maximum = trigterDeepThresholdNumericUpDown.Value;
 	}
 }
