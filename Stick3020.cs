@@ -12,6 +12,25 @@ class Stick3020: Form
 		Application.Run(new Stick3020());
 	}
 
+	private readonly static string LanguageValueName = "language";
+	private readonly static string LanguageJapaneseData = "Japanese";
+	private readonly static string LanguageEnglishData = "English";
+
+	private readonly static string ControllerSelectValueName = "controller";
+
+	private readonly static string BrakeSelectValueName = "brake";
+	private readonly static string BrakeSelectAutoData = "Auto";
+	private readonly static string BrakeSelect6StepData = "6-Step";
+	private readonly static string BrakeSelect7StepData = "7-Step";
+	private readonly static string BrakeSelect8StepData = "8-Step";
+	private readonly static string BrakeSelectAnalogData = "Analog";
+
+	private readonly static string StickThresholdValueName = "stickThreshold";
+	private readonly static string TriggerShallowThresholdValueName = "triggerShallowThreshold";
+	private readonly static string TriggerDeepThresholdValueName = "triggerDeepThreshold";
+	private readonly static string NotchHysteresisValueName = "notchHysteresis";
+	private readonly static string DeadmanValueName = "deadman";
+
 	private const int fontSize = 16, gridSize = 24;
 
 	private static Size GetSizeOnGrid(float width, float height)
@@ -82,7 +101,6 @@ class Stick3020: Form
 		languageMenuItem.Text = "言語 / Language (&L)";
 		languageJapaneseMenuItem = new ToolStripMenuItem();
 		languageJapaneseMenuItem.Text = "日本語 (&J)";
-		languageJapaneseMenuItem.Checked = true;
 		languageEnglishMenuItem = new ToolStripMenuItem();
 		languageEnglishMenuItem.Text = "English (&E)";
 		languageMenuItem.DropDownItems.Add(languageJapaneseMenuItem);
@@ -151,7 +169,7 @@ class Stick3020: Form
 		stickThresholdUnitLabel.Text = "%";
 		triggerShallowThresholdTitleLabel = CreateControl<Label>(inputConfigurationGroupBox, 0.5f, 2, 6, 1);
 		triggerShallowThresholdNumericUpDown = CreateControl<NumericUpDown>(inputConfigurationGroupBox, 6.5f, 2, 4, 1);
-		triggerShallowThresholdNumericUpDown.Maximum = 80;
+		triggerShallowThresholdNumericUpDown.Maximum = 100;
 		triggerShallowThresholdNumericUpDown.Minimum = 0;
 		triggerShallowThresholdNumericUpDown.Value = 30;
 		triggerShallowThresholdNumericUpDown.Increment = 1;
@@ -161,7 +179,7 @@ class Stick3020: Form
 		triggerDeepThresholdTitleLabel = CreateControl<Label>(inputConfigurationGroupBox, 0.5f, 3, 6, 1);
 		triggerDeepThresholdNumericUpDown = CreateControl<NumericUpDown>(inputConfigurationGroupBox, 6.5f, 3, 4, 1);
 		triggerDeepThresholdNumericUpDown.Maximum = 100;
-		triggerDeepThresholdNumericUpDown.Minimum = 30;
+		triggerDeepThresholdNumericUpDown.Minimum = 0;
 		triggerDeepThresholdNumericUpDown.Value = 80;
 		triggerDeepThresholdNumericUpDown.Increment = 1;
 		triggerDeepThresholdNumericUpDown.ValueChanged += TriggerThresholdChangeHandler;
@@ -176,6 +194,7 @@ class Stick3020: Form
 		notchHysteresisUnitLabel = CreateControl<Label>(inputConfigurationGroupBox, 10.5f, 4, 1, 1);
 		notchHysteresisUnitLabel.Text = "%";
 		enableDeadmanCheckBox = CreateControl<CheckBox>(inputConfigurationGroupBox, 0.5f, 5, 11, 1);
+		enableDeadmanCheckBox.Checked = true;
 		inputConfigurationGroupBox.ResumeLayout();
 
 		mainPanel.ResumeLayout();
@@ -186,6 +205,7 @@ class Stick3020: Form
 		SetControlTexts();
 
 		Load += LoadHandler;
+		FormClosed += FormClosedHandler;
 	}
 
 	private void SetControllerStatusTexts()
@@ -253,11 +273,93 @@ class Stick3020: Form
 
 	private void LoadHandler(object sender, EventArgs e)
 	{
+		RegistryIO regIO = RegistryIO.OpenForRead();
+		if (regIO != null)
+		{
+			string language = regIO.GetStringValue(LanguageValueName);
+			if (LanguageEnglishData.Equals(language))
+			{
+				languageEnglishMenuItem.Checked = true;
+				uiText = new EnglishUIText();
+			}
+			else
+			{
+				languageJapaneseMenuItem.Checked = true;
+			}
+
+			int? controller = regIO.GetIntValue(ControllerSelectValueName);
+			if (controller.HasValue && 0 <= controller.Value && controller.Value < 4)
+			{
+				controllerSelectRadioButtons[controller.Value].Checked = true;
+			}
+			else
+			{
+				controllerSelectRadioButtons[0].Checked = true;
+			}
+
+			string brake = regIO.GetStringValue(BrakeSelectValueName);
+			if (BrakeSelect6StepData.Equals(brake))
+			{
+				brake6StepRadioButton.Checked = true;
+			}
+			else if (BrakeSelect7StepData.Equals(brake))
+			{
+				brake7StepRadioButton.Checked = true;
+			}
+			else if (BrakeSelect8StepData.Equals(brake))
+			{
+				brake8StepRadioButton.Checked = true;
+			}
+			else if (BrakeSelectAnalogData.Equals(brake))
+			{
+				brakeAnalogRadioButton.Checked = true;
+			}
+			else
+			{
+				brakeAutoRadioButton.Checked = true;
+			}
+
+			int? stickRaw = regIO.GetIntValue(StickThresholdValueName);
+			if (stickRaw.HasValue)
+			{
+				stickThresholdNumericUpDown.Value = Math.Min(Math.Max(stickRaw.Value, 0), 100);
+			}
+			int? triggerShallowRaw = regIO.GetIntValue(TriggerShallowThresholdValueName);
+			if (triggerShallowRaw.HasValue)
+			{
+				triggerShallowThresholdNumericUpDown.Value = Math.Min(Math.Max(triggerShallowRaw.Value, 0), 100);
+			}
+			int? triggerDeepRaw = regIO.GetIntValue(TriggerDeepThresholdValueName);
+			if (triggerDeepRaw.HasValue)
+			{
+				triggerDeepThresholdNumericUpDown.Value = Math.Min(Math.Max(triggerDeepRaw.Value, triggerShallowThresholdNumericUpDown.Value), 100);
+			}
+			int? notchHysteresisRaw = regIO.GetIntValue(NotchHysteresisValueName);
+			if (notchHysteresisRaw.HasValue)
+			{
+				notchHysteresisNumericUpDown.Value = Math.Min(Math.Max(notchHysteresisRaw.Value, 0), 100);
+			}
+			int? deadmanRaw = regIO.GetIntValue(DeadmanValueName);
+			if (deadmanRaw.HasValue)
+			{
+				enableDeadmanCheckBox.Checked = deadmanRaw.Value != 0;
+			}
+
+			regIO.Close();
+		}
+		else
+		{
+			languageJapaneseMenuItem.Checked = true;
+			controllerSelectRadioButtons[0].Checked = true;
+			brakeAutoRadioButton.Checked = true;
+		}
+		TriggerThresholdChangeHandler(null, null);
+
 		for (int i = 0; i < 4; i++)
 		{
 			controllerConnected[i] = XInputReader.Read(i).HasValue;
 		}
-		SetControllerStatusTexts();
+		SetControlTexts();
 		inputTimer = new Timer();
 		inputTimer.Interval = 15;
 		inputTimer.Tick += InputTimerTickHandler;
@@ -266,6 +368,60 @@ class Stick3020: Form
 		controllerCheckTimer.Interval = 1000;
 		controllerCheckTimer.Tick += ControllerCheckTimerTickHandler;
 		controllerCheckTimer.Start();
+	}
+
+	private void FormClosedHandler(object sender, EventArgs e)
+	{
+		RegistryIO regIO = RegistryIO.OpenForWrite();
+		if (regIO != null)
+		{
+			if (languageJapaneseMenuItem.Checked)
+			{
+				regIO.SetValue(LanguageValueName, LanguageJapaneseData);
+			}
+			else if (languageEnglishMenuItem.Checked)
+			{
+				regIO.SetValue(LanguageValueName, LanguageEnglishData);
+			}
+
+			for (int i = 0; i < 4; i++)
+			{
+				if (controllerSelectRadioButtons[i].Checked)
+				{
+					regIO.SetValue(ControllerSelectValueName, i);
+					break;
+				}
+			}
+
+			if (brakeAutoRadioButton.Checked)
+			{
+				regIO.SetValue(BrakeSelectValueName, BrakeSelectAutoData);
+			}
+			else if (brake6StepRadioButton.Checked)
+			{
+				regIO.SetValue(BrakeSelectValueName, BrakeSelect6StepData);
+			}
+			else if (brake7StepRadioButton.Checked)
+			{
+				regIO.SetValue(BrakeSelectValueName, BrakeSelect7StepData);
+			}
+			else if (brake8StepRadioButton.Checked)
+			{
+				regIO.SetValue(BrakeSelectValueName, BrakeSelect8StepData);
+			}
+			else if (brakeAnalogRadioButton.Checked)
+			{
+				regIO.SetValue(BrakeSelectValueName, BrakeSelectAnalogData);
+			}
+
+			regIO.SetValue(StickThresholdValueName, (int)stickThresholdNumericUpDown.Value);
+			regIO.SetValue(TriggerShallowThresholdValueName, (int)triggerShallowThresholdNumericUpDown.Value);
+			regIO.SetValue(TriggerDeepThresholdValueName, (int)triggerDeepThresholdNumericUpDown.Value);
+			regIO.SetValue(NotchHysteresisValueName, (int)notchHysteresisNumericUpDown.Value);
+			regIO.SetValue(DeadmanValueName, enableDeadmanCheckBox.Checked ? 1 : 0);
+
+			regIO.Close();
+		}
 	}
 
 	private void InputTimerTickHandler(object sender, EventArgs e)
