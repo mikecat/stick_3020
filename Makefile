@@ -9,7 +9,8 @@ OPTIONS= \
 SOURCES= \
 	Stick3020.cs \
 	UItext.cs \
-	JapaneseUIText.cs
+	JapaneseUIText.cs \
+	EnglishUIText.cs
 
 $(TARGET): $(SOURCES)
 	csc /out:$@ $(OPTIONS) $^

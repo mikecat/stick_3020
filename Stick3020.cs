@@ -179,6 +179,8 @@ class Stick3020: Form
 		mainPanel.ResumeLayout();
 		ResumeLayout();
 
+		languageJapaneseMenuItem.Click += LanguageMenuClickHandler;
+		languageEnglishMenuItem.Click += LanguageMenuClickHandler;
 		SetControlTexts();
 	}
 
@@ -210,5 +212,22 @@ class Stick3020: Form
 		trigterDeepThresholdTitleLabel.Text = uiText.InputTriggerThresholdDeep;
 		notchHysteresisTitleLabel.Text = uiText.InputNotchHysteresis;
 		enableDeadmanCheckBox.Text = uiText.InputDeadman;
+	}
+
+	private void LanguageMenuClickHandler(object sender, EventArgs e)
+	{
+		if (sender == languageJapaneseMenuItem)
+		{
+			languageJapaneseMenuItem.Checked = true;
+			languageEnglishMenuItem.Checked = false;
+			uiText = new JapaneseUIText();
+		}
+		else if (sender == languageEnglishMenuItem)
+		{
+			languageJapaneseMenuItem.Checked = false;
+			languageEnglishMenuItem.Checked = true;
+			uiText = new EnglishUIText();
+		}
+		SetControlTexts();
 	}
 }
