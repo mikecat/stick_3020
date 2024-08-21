@@ -8,6 +8,7 @@ OPTIONS= \
 
 SOURCES= \
 	Stick3020.cs \
+	XInputReader.cs \
 	UItext.cs \
 	JapaneseUIText.cs \
 	EnglishUIText.cs

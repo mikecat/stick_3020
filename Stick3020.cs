@@ -120,23 +120,23 @@ class Stick3020: Form
 		operationStatusGroupBox.SuspendLayout();
 		powerTitleLabel = CreateControl<Label>(operationStatusGroupBox, 0.5f, 1, 5, 1);
 		powerNotchLabel = CreateControl<Label>(operationStatusGroupBox, 5.5f, 1, 4, 1);
-		powerNotchLabel.Text = "N";
+		powerNotchLabel.Text = "-";
 		powerDepthLabel = CreateControl<Label>(operationStatusGroupBox, 9.5f, 1, 2, 1);
-		powerDepthLabel.Text = "100%";
+		powerDepthLabel.Text = "-";
 		brakeTitleLabel = CreateControl<Label>(operationStatusGroupBox, 0.5f, 2, 5, 1);
 		brakeNotchLabel = CreateControl<Label>(operationStatusGroupBox, 5.5f, 2, 4, 1);
-		brakeNotchLabel.Text = "400kPa";
+		brakeNotchLabel.Text = "-";
 		brakeDepthLabel = CreateControl<Label>(operationStatusGroupBox, 9.5f, 2, 2, 1);
 		brakeDepthLabel.TextAlign = ContentAlignment.TopRight;
-		brakeDepthLabel.Text = "100%";
+		brakeDepthLabel.Text = "-";
 		leftTriggerTitleLabel = CreateControl<Label>(operationStatusGroupBox, 0.5f, 3, 9, 1);
 		leftTriggerDepthLabel = CreateControl<Label>(operationStatusGroupBox, 9.5f, 3, 2, 1);
 		leftTriggerDepthLabel.TextAlign = ContentAlignment.TopRight;
-		leftTriggerDepthLabel.Text = "0%";
+		leftTriggerDepthLabel.Text = "-";
 		rightTriggerTitleLabel = CreateControl<Label>(operationStatusGroupBox, 0.5f, 4, 9, 1);
 		rightTriggerDepthLabel = CreateControl<Label>(operationStatusGroupBox, 9.5f, 4, 2, 1);
 		rightTriggerDepthLabel.TextAlign = ContentAlignment.TopRight;
-		rightTriggerDepthLabel.Text = "0%";
+		rightTriggerDepthLabel.Text = "-";
 		operationStatusGroupBox.ResumeLayout();
 
 		inputConfigurationGroupBox = CreateControl<GroupBox>(mainPanel, 11, 6.5f, 12, 6.5f);
@@ -184,15 +184,24 @@ class Stick3020: Form
 		languageJapaneseMenuItem.Click += LanguageMenuClickHandler;
 		languageEnglishMenuItem.Click += LanguageMenuClickHandler;
 		SetControlTexts();
+
+		Load += LoadHandler;
+	}
+
+	private void SetControllerStatusTexts()
+	{
+		for (int i = 0; i < 4; i++)
+		{
+			controllerSelectRadioButtons[i].Text = controllerConnected[i] ?
+				i.ToString() :
+				string.Format("{0} ({1})", i, uiText.ControllerDisconnected);
+		}
 	}
 
 	private void SetControlTexts()
 	{
 		controllerSelectGroupBox.Text = uiText.ControllerSelect;
-		for (int i = 0; i < 4; i++)
-		{
-			controllerSelectRadioButtons[i].Text = i.ToString();
-		}
+		SetControllerStatusTexts();
 
 		brakeSelectGroupBox.Text = uiText.BrakeSelect;
 		brakeAutoRadioButton.Text = string.Format("{0}：{1}", uiText.BrakeAuto, uiText.Brake6StepForAuto);
@@ -237,5 +246,111 @@ class Stick3020: Form
 	{
 		trigterDeepThresholdNumericUpDown.Minimum = trigterShallowThresholdNumericUpDown.Value;
 		trigterShallowThresholdNumericUpDown.Maximum = trigterDeepThresholdNumericUpDown.Value;
+	}
+
+	private Timer inputTimer, controllerCheckTimer;
+	private bool[] controllerConnected = new bool[4];
+
+	private void LoadHandler(object sender, EventArgs e)
+	{
+		for (int i = 0; i < 4; i++)
+		{
+			controllerConnected[i] = XInputReader.Read(i).HasValue;
+		}
+		SetControllerStatusTexts();
+		inputTimer = new Timer();
+		inputTimer.Interval = 15;
+		inputTimer.Tick += InputTimerTickHandler;
+		inputTimer.Start();
+		controllerCheckTimer = new Timer();
+		controllerCheckTimer.Interval = 1000;
+		controllerCheckTimer.Tick += ControllerCheckTimerTickHandler;
+		controllerCheckTimer.Start();
+	}
+
+	private void InputTimerTickHandler(object sender, EventArgs e)
+	{
+		XInputReader.XInputGamepad? inputRaw = null;
+		for (int i = 0; i < 4; i++)
+		{
+			if (controllerSelectRadioButtons[i].Checked && controllerConnected[i])
+			{
+				inputRaw = XInputReader.Read(i);
+				if (inputRaw.HasValue != controllerConnected[i])
+				{
+					controllerConnected[i] = inputRaw.HasValue;
+					SetControllerStatusTexts();
+				}
+				break;
+			}
+		}
+		int inputButtons = 0;
+		// 力行：左が角度0、時計回り
+		// ブレーキ：上が角度0、反時計回り
+		int accelPower = -1,  brakePower = -1, leftTriggerPower = -1, rightTriggerPower = -1;
+		double accelAngle = 0, brakeAngle = 0;
+		if (inputRaw.HasValue)
+		{
+			inputButtons = inputRaw.Value.wButtons;
+			double lx = inputRaw.Value.sThumbLX / 32767.0;
+			double ly = inputRaw.Value.sThumbLY / 32767.0;
+			double rx = inputRaw.Value.sThumbRX / 32767.0;
+			double ry = inputRaw.Value.sThumbRY / 32767.0;
+			accelPower = (int)Math.Min(Math.Truncate(Math.Sqrt(lx * lx + ly * ly) * 100), 100);
+			accelAngle = Math.Atan2(-ly, lx) + Math.PI;
+			brakePower = (int)Math.Min(Math.Truncate(Math.Sqrt(rx * rx + ry * ry) * 100), 100);
+			brakeAngle = Math.Atan2(rx, -ry) + Math.PI;
+			leftTriggerPower = inputRaw.Value.bLeftTrigger * 100 / 255;
+			rightTriggerPower = inputRaw.Value.bRightTrigger * 100 / 255;
+			powerDepthLabel.Text = string.Format("{0}%", accelPower);
+			brakeDepthLabel.Text = string.Format("{0}%", brakePower);
+			leftTriggerDepthLabel.Text = string.Format("{0}%", leftTriggerPower);
+			rightTriggerDepthLabel.Text = string.Format("{0}%", rightTriggerPower);
+		}
+		else
+		{
+			powerDepthLabel.Text = "-";
+			brakeDepthLabel.Text = "-";
+			leftTriggerDepthLabel.Text = "-";
+			rightTriggerDepthLabel.Text = "-";
+		}
+		if (accelPower >= stickThresholdNumericUpDown.Value)
+		{
+			powerNotchLabel.Text = ((int)(accelAngle / (Math.PI * 2) * 360)).ToString();
+		}
+		else
+		{
+			powerNotchLabel.Text = "-";
+		}
+		if (brakePower >= stickThresholdNumericUpDown.Value)
+		{
+			brakeNotchLabel.Text = ((int)(brakeAngle / (Math.PI * 2) * 360)).ToString();
+		}
+		else
+		{
+			brakeNotchLabel.Text = "-";
+		}
+	}
+
+	private void ControllerCheckTimerTickHandler(object sender, EventArgs e)
+	{
+		bool valueChanged = false;
+		for (int i = 0; i < 4; i++)
+		{
+			if (controllerConnected[i])
+			{
+				if (!controllerSelectRadioButtons[i].Checked)
+				{
+					controllerConnected[i] = XInputReader.Read(i).HasValue;
+					if (!controllerConnected[i]) valueChanged = true;
+				}
+			}
+			else
+			{
+				controllerConnected[i] = XInputReader.Read(i).HasValue;
+				if (controllerConnected[i]) valueChanged = true;
+			}
+		}
+		if (valueChanged) SetControllerStatusTexts();
 	}
 }
