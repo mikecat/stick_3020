@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
+using TrainCrew;
 
 class Stick3020: Form
 {
@@ -268,8 +269,25 @@ class Stick3020: Form
 		triggerShallowThresholdNumericUpDown.Maximum = triggerDeepThresholdNumericUpDown.Value;
 	}
 
+	private enum BrakeKind
+	{
+		Brake6Steps,
+		Brake7Steps,
+		Brake8Steps,
+		BrakeAnalog,
+	}
+
+	private bool trainCrewEnabled = false;
+
 	private Timer inputTimer, controllerCheckTimer;
 	private bool[] controllerConnected = new bool[4];
+
+	private BrakeKind prevBrakeKind = BrakeKind.Brake6Steps;
+	private int? prevPowerNotch = null;
+	private int? prevBrakeNotch = null;
+	private float? prevBrakePressure = null;
+	private bool prevDeadmanIsActive = false; // active = 発報中 (ブレーキをかける状態)
+	private bool prevBuzzer = false;
 
 	private void LoadHandler(object sender, EventArgs e)
 	{
@@ -301,18 +319,22 @@ class Stick3020: Form
 			if (BrakeSelect6StepData.Equals(brake))
 			{
 				brake6StepRadioButton.Checked = true;
+				prevBrakeKind = BrakeKind.Brake6Steps;
 			}
 			else if (BrakeSelect7StepData.Equals(brake))
 			{
 				brake7StepRadioButton.Checked = true;
+				prevBrakeKind = BrakeKind.Brake7Steps;
 			}
 			else if (BrakeSelect8StepData.Equals(brake))
 			{
 				brake8StepRadioButton.Checked = true;
+				prevBrakeKind = BrakeKind.Brake8Steps;
 			}
 			else if (BrakeSelectAnalogData.Equals(brake))
 			{
 				brakeAnalogRadioButton.Checked = true;
+				prevBrakeKind = BrakeKind.BrakeAnalog;
 			}
 			else
 			{
@@ -360,6 +382,10 @@ class Stick3020: Form
 			controllerConnected[i] = XInputReader.Read(i).HasValue;
 		}
 		SetControlTexts();
+
+		TrainCrewInput.Init();
+		trainCrewEnabled = true;
+
 		inputTimer = new Timer();
 		inputTimer.Interval = 15;
 		inputTimer.Tick += InputTimerTickHandler;
@@ -372,6 +398,12 @@ class Stick3020: Form
 
 	private void FormClosedHandler(object sender, EventArgs e)
 	{
+		trainCrewEnabled = false;
+		TrainCrewInput.SetDeadman(0, true);
+		TrainCrewInput.SetDeadman(1, true);
+		TrainCrewInput.SetButton(InputAction.Buzzer, false);
+		TrainCrewInput.Dispose();
+
 		RegistryIO regIO = RegistryIO.OpenForWrite();
 		if (regIO != null)
 		{
@@ -426,6 +458,54 @@ class Stick3020: Form
 
 	private void InputTimerTickHandler(object sender, EventArgs e)
 	{
+		if (!trainCrewEnabled) return;
+
+		BrakeKind currentBrakeKind, autoBrakeKind;
+		int? currentPowerNotch = null;
+		int? currentBrakeNotch = null;
+		float? currentBrakePressure = null;
+		bool currentDeadmanIsActive = false;
+		bool currentBuzzer = false;
+
+		TrainState trainState = TrainCrewInput.GetTrainState();
+		string carModel = trainState.CarStates.Count > 0 ? trainState.CarStates[0].CarModel : "";
+		if ("4000".Equals(carModel) || "4000R".Equals(carModel))
+		{
+			autoBrakeKind = BrakeKind.Brake7Steps;
+			brakeAutoRadioButton.Text = string.Format("{0}：{1}", uiText.BrakeAuto, uiText.Brake7StepForAuto);
+		}
+		else if ("3020".Equals(carModel))
+		{
+			autoBrakeKind = BrakeKind.BrakeAnalog;
+			brakeAutoRadioButton.Text = string.Format("{0}：{1}", uiText.BrakeAuto, uiText.BrakeAnalogForAuto);
+		}
+		else
+		{
+			autoBrakeKind = BrakeKind.Brake6Steps;
+			brakeAutoRadioButton.Text = string.Format("{0}：{1}", uiText.BrakeAuto, uiText.Brake6StepForAuto);
+		}
+
+		if (brake6StepRadioButton.Checked)
+		{
+			currentBrakeKind = BrakeKind.Brake6Steps;
+		}
+		else if (brake7StepRadioButton.Checked)
+		{
+			currentBrakeKind = BrakeKind.Brake7Steps;
+		}
+		else if (brake8StepRadioButton.Checked)
+		{
+			currentBrakeKind = BrakeKind.Brake8Steps;
+		}
+		else if (brakeAnalogRadioButton.Checked)
+		{
+			currentBrakeKind = BrakeKind.BrakeAnalog;
+		}
+		else
+		{
+			currentBrakeKind = autoBrakeKind;
+		}
+
 		XInputReader.XInputGamepad? inputRaw = null;
 		for (int i = 0; i < 4; i++)
 		{
@@ -472,7 +552,61 @@ class Stick3020: Form
 		}
 		if (accelPower >= stickThresholdNumericUpDown.Value)
 		{
-			powerNotchLabel.Text = ((int)(accelAngle / (Math.PI * 2) * 360)).ToString();
+			// 135度 (0.75*PI) = N
+			// 抑速：そこから30度 (1.0/6.0*PI) ずつマイナス
+			// P：そこから30度ずつプラス
+			// -3 -2 -1 0 1 2 3 4 5 ← ノッチ
+			//   0  1  2 3 4 5 6 7  ← 閾値配列
+			double[] thresholds = new double[8];
+			for (int i = 0; i < 8; i++)
+			{
+				thresholds[i] = (0.75 + (i * 2 - 5) / 12.0) * Math.PI;
+			}
+			if (prevBrakeKind == currentBrakeKind && prevPowerNotch.HasValue)
+			{
+				double hysteresisDelta = 1.0 / 12.0 * Math.PI * (double)(notchHysteresisNumericUpDown.Value / 100);
+				for (int i = 0; i < 8; i++)
+				{
+					if (i <= prevPowerNotch.Value + 2)
+					{
+						thresholds[i] -= hysteresisDelta;
+					}
+					else
+					{
+						thresholds[i] += hysteresisDelta;
+					}
+				}
+			}
+			// 閾値に基づいてノッチを読み取る
+			currentPowerNotch = 5;
+			for (int i = 0; i < 8; i++)
+			{
+				if (accelAngle < thresholds[i])
+				{
+					currentPowerNotch = i - 3;
+					break;
+				}
+			}
+			// 読み取ったノッチを表示する
+			if (currentPowerNotch.Value < 0)
+			{
+				if (currentBrakeKind == BrakeKind.Brake6Steps)
+				{
+					powerNotchLabel.Text = uiText.OperationPowerHoldingWithoutNumber;
+				}
+				else
+				{
+					powerNotchLabel.Text = string.Format("{0}{1}", uiText.OperationPowerHolding, -currentPowerNotch.Value);
+				}
+			}
+			else if (currentPowerNotch.Value == 0)
+			{
+				powerNotchLabel.Text = "N";
+			}
+			else
+			{
+				powerNotchLabel.Text = string.Format("P{0}", currentPowerNotch.Value);
+			}
 		}
 		else
 		{
@@ -480,12 +614,182 @@ class Stick3020: Form
 		}
 		if (brakePower >= stickThresholdNumericUpDown.Value)
 		{
-			brakeNotchLabel.Text = ((int)(brakeAngle / (Math.PI * 2) * 360)).ToString();
+			// 90度 (0.5*PI) = ユルメ
+			// 180度 (PI) = 常用最大
+			// 225度 (1.25*PI) = 非常
+			double ebThreshold = 1.125 * Math.PI;
+			double ebHysteresisDelta = 0.125 * Math.PI * (double)(notchHysteresisNumericUpDown.Value / 100);
+			if (currentBrakeKind == BrakeKind.BrakeAnalog)
+			{
+				if (prevBrakeKind == currentBrakeKind && prevBrakePressure.HasValue)
+				{
+					if (prevBrakePressure.Value > 405)
+					{
+						ebThreshold -= ebHysteresisDelta;
+					}
+					else
+					{
+						ebThreshold += ebHysteresisDelta;
+					}
+				}
+				if (brakeAngle <= 0.5 * Math.PI)
+				{
+					currentBrakePressure = 0;
+				}
+				else if (brakeAngle < Math.PI)
+				{
+					currentBrakePressure = (float)(400 * (brakeAngle - 0.5 * Math.PI) / (0.5 * Math.PI));
+				}
+				else if (brakeAngle < ebThreshold)
+				{
+					currentBrakePressure = 400;
+				}
+				else
+				{
+					currentBrakePressure = 410;
+				}
+				// 読み取ったノッチを表示する
+				if (currentBrakePressure.Value <= 0)
+				{
+					brakeNotchLabel.Text = uiText.OperationBrakeRelease;
+				}
+				else if (currentBrakePressure.Value > 405)
+				{
+					brakeNotchLabel.Text = "EB";
+				}
+				else
+				{
+					brakeNotchLabel.Text = string.Format("B-{0:#}kPa", currentBrakePressure.Value);
+				}
+			}
+			else
+			{
+				// 0 1 2 3 4 5 6 7 8 ← ノッチ (BrakeKind.Brake7Steps の場合)
+				//  0 1 2 3 4 5 6    ← 閾値配列 (常用→非常の閾値は別管理なので、ここには含めない)
+				int numBrakeSteps =
+					currentBrakeKind == BrakeKind.Brake7Steps ? 7 :
+					currentBrakeKind == BrakeKind.Brake8Steps ? 8 : 6;
+				double[] thresholds = new double[numBrakeSteps];
+				for (int i = 0; i < numBrakeSteps; i++)
+				{
+					thresholds[i] = (0.5 + 0.5 * (i * 2 + 1) / (numBrakeSteps * 2)) * Math.PI;
+				}
+				if (prevBrakeKind == currentBrakeKind && prevBrakeNotch.HasValue)
+				{
+					double hysteresisDelta = 0.5 / (numBrakeSteps * 2) * Math.PI * (double)(notchHysteresisNumericUpDown.Value / 100);
+					for (int i = 0; i < numBrakeSteps; i++)
+					{
+						if (i < prevBrakeNotch.Value)
+						{
+							thresholds[i] -= hysteresisDelta;
+						}
+						else
+						{
+							thresholds[i] += hysteresisDelta;
+						}
+					}
+					if (prevBrakeNotch.Value <= numBrakeSteps)
+					{
+						ebThreshold += ebHysteresisDelta;
+					}
+					else
+					{
+						ebThreshold -= ebHysteresisDelta;
+					}
+				}
+				// 閾値に基づいてノッチを読み取る
+				if (brakeAngle >= ebThreshold)
+				{
+					currentBrakeNotch = numBrakeSteps + 1;
+				}
+				else
+				{
+					currentBrakeNotch = numBrakeSteps;
+					for (int i = 0; i < numBrakeSteps; i++)
+					{
+						if (brakeAngle < thresholds[i])
+						{
+							currentBrakeNotch = i;
+							break;
+						}
+					}
+				}
+				// 読み取ったノッチを表示する
+				if (currentBrakeNotch.Value > numBrakeSteps)
+				{
+					brakeNotchLabel.Text = "EB";
+				}
+				else if (currentBrakeNotch.Value == 0)
+				{
+					brakeNotchLabel.Text = uiText.OperationBrakeRelease;
+				}
+				else
+				{
+					brakeNotchLabel.Text = string.Format("B{0}", currentBrakeNotch.Value);
+				}
+			}
 		}
 		else
 		{
 			brakeNotchLabel.Text = "-";
 		}
+		currentDeadmanIsActive = enableDeadmanCheckBox.Checked &&
+			!(currentPowerNotch.HasValue && currentBrakeNotch.HasValue);
+
+		// R1ボタン = 連絡ブザー
+		currentBuzzer = (inputButtons & 0x0200) != 0;
+
+		if (currentBrakeKind != prevBrakeKind || currentPowerNotch != prevPowerNotch ||
+			(currentBrakeKind == BrakeKind.BrakeAnalog ?
+				currentBrakePressure != prevBrakePressure :
+				currentBrakeNotch != prevBrakeNotch))
+		{
+			if (currentPowerNotch.HasValue)
+			{
+				int power = currentPowerNotch.Value;
+				if (currentBrakeKind == BrakeKind.Brake6Steps && power < 0) power = 0;
+				TrainCrewInput.SetPowerNotch(power);
+			}
+			if (currentBrakeNotch.HasValue || currentBrakePressure.HasValue)
+			{
+				if (currentBrakeKind == BrakeKind.BrakeAnalog)
+				{
+					TrainCrewInput.SetBrakeSAP(currentBrakePressure.Value);
+				}
+				else
+				{
+					int brake = currentBrakeNotch.Value;
+					if (currentBrakeKind == BrakeKind.Brake6Steps)
+					{
+						if (brake == 0)
+						{
+							if (currentPowerNotch.HasValue && currentPowerNotch < 0) brake = 1;
+						}
+						else
+						{
+							brake++;
+						}
+					}
+					TrainCrewInput.SetBrakeNotch(brake);
+				}
+			}
+		}
+		if (currentDeadmanIsActive != prevDeadmanIsActive)
+		{
+			TrainCrewInput.SetDeadman(0, !currentDeadmanIsActive);
+			TrainCrewInput.SetDeadman(1, !currentDeadmanIsActive);
+		}
+		if (currentBuzzer != prevBuzzer)
+		{
+			TrainCrewInput.SetButton(InputAction.Buzzer, currentBuzzer);
+		}
+
+		prevBrakeKind = currentBrakeKind;
+		prevPowerNotch = currentPowerNotch;
+		prevBrakeNotch = currentBrakeNotch;
+		prevBrakePressure = currentBrakePressure;
+		prevDeadmanIsActive = currentDeadmanIsActive;
+		prevBuzzer = currentBuzzer;
 	}
 
 	private void ControllerCheckTimerTickHandler(object sender, EventArgs e)
