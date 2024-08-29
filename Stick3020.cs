@@ -744,12 +744,12 @@ class Stick3020: Form
 			!(currentPowerNotch.HasValue && currentBrakeNotch.HasValue);
 
 		// R1ボタン = 連絡ブザー
-		currentBuzzer = (inputButtons & 0x0200) != 0;
+		currentBuzzer = (inputButtons & XInputReader.XINPUT_GAMEPAD_RIGHT_SHOULDER) != 0;
 		// RT = 浅押し：電笛、深押し：(電笛+)空笛
 		currentHornAir = rightTriggerPower >= triggerDeepThresholdNumericUpDown.Value;
 		currentHornEle = rightTriggerPower >= triggerShallowThresholdNumericUpDown.Value;
 		// L1ボタン = EBリセット
-		currentEBReset = (inputButtons & 0x0100) != 0;
+		currentEBReset = (inputButtons & XInputReader.XINPUT_GAMEPAD_LEFT_SHOULDER) != 0;
 
 		if (currentBrakeKind != prevBrakeKind || currentPowerNotch != prevPowerNotch ||
 			(currentBrakeKind == BrakeKind.BrakeAnalog ?

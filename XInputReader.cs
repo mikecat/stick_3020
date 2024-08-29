@@ -3,6 +3,9 @@ using System.Runtime.InteropServices;
 
 class XInputReader
 {
+	public const ushort XINPUT_GAMEPAD_LEFT_SHOULDER = 0x0100;
+	public const ushort XINPUT_GAMEPAD_RIGHT_SHOULDER = 0x0200;
+
 	private const uint ERROR_SUCCESS = 0;
 
 	[StructLayout(LayoutKind.Sequential)]
