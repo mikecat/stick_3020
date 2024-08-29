@@ -95,6 +95,7 @@ class Stick3020: Form
 		this.FormBorderStyle = FormBorderStyle.FixedSingle;
 		this.MaximizeBox = false;
 		this.Text = "Stick 3020";
+		this.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
 		SuspendLayout();
 
 		mainMenuStrip = new MenuStrip();
