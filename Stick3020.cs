@@ -288,6 +288,8 @@ class Stick3020: Form
 	private float? prevBrakePressure = null;
 	private bool prevDeadmanIsActive = false; // active = 発報中 (ブレーキをかける状態)
 	private bool prevBuzzer = false;
+	private bool prevHornAir = false, prevHornEle = false;
+	private bool prevEBReset = false;
 
 	private void LoadHandler(object sender, EventArgs e)
 	{
@@ -402,6 +404,9 @@ class Stick3020: Form
 		TrainCrewInput.SetDeadman(0, true);
 		TrainCrewInput.SetDeadman(1, true);
 		TrainCrewInput.SetButton(InputAction.Buzzer, false);
+		TrainCrewInput.SetButton(InputAction.HornAir, false);
+		TrainCrewInput.SetButton(InputAction.HornEle, false);
+		TrainCrewInput.SetButton(InputAction.EBReset, false);
 		TrainCrewInput.Dispose();
 
 		RegistryIO regIO = RegistryIO.OpenForWrite();
@@ -466,6 +471,8 @@ class Stick3020: Form
 		float? currentBrakePressure = null;
 		bool currentDeadmanIsActive = false;
 		bool currentBuzzer = false;
+		bool currentHornAir = false, currentHornEle = false;
+		bool currentEBReset = false;
 
 		TrainState trainState = TrainCrewInput.GetTrainState();
 		string carModel = trainState.CarStates.Count > 0 ? trainState.CarStates[0].CarModel : "";
@@ -738,6 +745,11 @@ class Stick3020: Form
 
 		// R1ボタン = 連絡ブザー
 		currentBuzzer = (inputButtons & 0x0200) != 0;
+		// RT = 浅押し：電笛、深押し：(電笛+)空笛
+		currentHornAir = rightTriggerPower >= triggerDeepThresholdNumericUpDown.Value;
+		currentHornEle = rightTriggerPower >= triggerShallowThresholdNumericUpDown.Value;
+		// L1ボタン = EBリセット
+		currentEBReset = (inputButtons & 0x0100) != 0;
 
 		if (currentBrakeKind != prevBrakeKind || currentPowerNotch != prevPowerNotch ||
 			(currentBrakeKind == BrakeKind.BrakeAnalog ?
@@ -783,6 +795,18 @@ class Stick3020: Form
 		{
 			TrainCrewInput.SetButton(InputAction.Buzzer, currentBuzzer);
 		}
+		if (currentHornAir != prevHornAir)
+		{
+			TrainCrewInput.SetButton(InputAction.HornAir, currentHornAir);
+		}
+		if (currentHornEle != prevHornEle)
+		{
+			TrainCrewInput.SetButton(InputAction.HornEle, currentHornEle);
+		}
+		if (currentEBReset != prevEBReset)
+		{
+			TrainCrewInput.SetButton(InputAction.EBReset, currentEBReset);
+		}
 
 		prevBrakeKind = currentBrakeKind;
 		prevPowerNotch = currentPowerNotch;
@@ -790,6 +814,9 @@ class Stick3020: Form
 		prevBrakePressure = currentBrakePressure;
 		prevDeadmanIsActive = currentDeadmanIsActive;
 		prevBuzzer = currentBuzzer;
+		prevHornAir = currentHornAir;
+		prevHornEle = currentHornEle;
+		prevEBReset = currentEBReset;
 	}
 
 	private void ControllerCheckTimerTickHandler(object sender, EventArgs e)
