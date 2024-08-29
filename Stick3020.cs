@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Reflection;
 using System.Windows.Forms;
 using TrainCrew;
 
@@ -91,10 +92,23 @@ class Stick3020: Form
 
 	public Stick3020()
 	{
+		AssemblyName assemblyName = Assembly.GetExecutingAssembly().GetName();
+		Version assemblyVersion = assemblyName.Version;
+		string versionString = "";
+		if (assemblyVersion != null)
+		{
+			versionString = string.Format(
+				" Ver {0}.{1}.{2}",
+				assemblyVersion.Major,
+				assemblyVersion.Minor,
+				assemblyVersion.Build
+			);
+		}
+
 		this.Font = new Font("MS UI Gothic", fontSize, GraphicsUnit.Pixel);
 		this.FormBorderStyle = FormBorderStyle.FixedSingle;
 		this.MaximizeBox = false;
-		this.Text = "Stick 3020";
+		this.Text = "Stick 3020" + versionString;
 		this.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
 		SuspendLayout();
 

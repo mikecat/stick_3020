@@ -8,6 +8,7 @@ OPTIONS= \
 	/reference:TrainCrewInput.dll
 
 SOURCES= \
+	AssemblyInfo.cs \
 	Stick3020.cs \
 	XInputReader.cs \
 	RegistryIO.cs \
