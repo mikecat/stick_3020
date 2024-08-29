@@ -741,7 +741,7 @@ class Stick3020: Form
 			brakeNotchLabel.Text = "-";
 		}
 		currentDeadmanIsActive = enableDeadmanCheckBox.Checked &&
-			!(currentPowerNotch.HasValue && currentBrakeNotch.HasValue);
+			!(currentPowerNotch.HasValue && (currentBrakeNotch.HasValue || currentBrakePressure.HasValue));
 
 		// R1ボタン = 連絡ブザー
 		currentBuzzer = (inputButtons & XInputReader.XINPUT_GAMEPAD_RIGHT_SHOULDER) != 0;
