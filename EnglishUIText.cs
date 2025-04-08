@@ -7,8 +7,8 @@ class EnglishUIText: UIText
 	public override string BrakeAuto { get { return "Auto"; }}
 	public override string Brake6Step { get { return "6-Step (general)"; }}
 	public override string Brake7Step { get { return "7-Step (model 4000/4000R)"; }}
-	public override string Brake8Step { get { return "8-Step (model 3020)"; }}
-	public override string BrakeAnalog { get { return "Analog (model 3020)"; }}
+	public override string Brake8Step { get { return "8-Step (model 3020/3000)"; }}
+	public override string BrakeAnalog { get { return "Analog (model 3020/3000)"; }}
 	public override string Brake6StepForAuto { get { return "6-Step"; }}
 	public override string Brake7StepForAuto { get { return "7-Step"; }}
 	public override string Brake8StepForAuto { get { return "8-Step"; }}

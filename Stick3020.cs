@@ -496,7 +496,7 @@ class Stick3020: Form
 			autoBrakeKind = BrakeKind.Brake7Steps;
 			brakeAutoRadioButton.Text = string.Format("{0}：{1}", uiText.BrakeAuto, uiText.Brake7StepForAuto);
 		}
-		else if (carModel == "3020")
+		else if (carModel == "3020" || carModel == "3000")
 		{
 			autoBrakeKind = BrakeKind.BrakeAnalog;
 			brakeAutoRadioButton.Text = string.Format("{0}：{1}", uiText.BrakeAuto, uiText.BrakeAnalogForAuto);

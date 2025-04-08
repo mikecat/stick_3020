@@ -7,8 +7,8 @@ class JapaneseUIText: UIText
 	public override string BrakeAuto { get { return "自動"; }}
 	public override string Brake6Step { get { return "6段 (一般)"; }}
 	public override string Brake7Step { get { return "7段 (4000/4000R形)"; }}
-	public override string Brake8Step { get { return "8段 (3020形)"; }}
-	public override string BrakeAnalog { get { return "アナログ (3020形)"; }}
+	public override string Brake8Step { get { return "8段 (3020/3000形)"; }}
+	public override string BrakeAnalog { get { return "アナログ (3020/3000形)"; }}
 	public override string Brake6StepForAuto { get { return "6段"; }}
 	public override string Brake7StepForAuto { get { return "7段"; }}
 	public override string Brake8StepForAuto { get { return "8段"; }}
