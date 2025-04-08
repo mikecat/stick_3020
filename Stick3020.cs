@@ -312,7 +312,7 @@ class Stick3020: Form
 		if (regIO != null)
 		{
 			string language = regIO.GetStringValue(LanguageValueName);
-			if (LanguageEnglishData.Equals(language))
+			if (language == LanguageEnglishData)
 			{
 				languageEnglishMenuItem.Checked = true;
 				uiText = new EnglishUIText();
@@ -333,22 +333,22 @@ class Stick3020: Form
 			}
 
 			string brake = regIO.GetStringValue(BrakeSelectValueName);
-			if (BrakeSelect6StepData.Equals(brake))
+			if (brake == BrakeSelect6StepData)
 			{
 				brake6StepRadioButton.Checked = true;
 				prevBrakeKind = BrakeKind.Brake6Steps;
 			}
-			else if (BrakeSelect7StepData.Equals(brake))
+			else if (brake == BrakeSelect7StepData)
 			{
 				brake7StepRadioButton.Checked = true;
 				prevBrakeKind = BrakeKind.Brake7Steps;
 			}
-			else if (BrakeSelect8StepData.Equals(brake))
+			else if (brake == BrakeSelect8StepData)
 			{
 				brake8StepRadioButton.Checked = true;
 				prevBrakeKind = BrakeKind.Brake8Steps;
 			}
-			else if (BrakeSelectAnalogData.Equals(brake))
+			else if (brake == BrakeSelectAnalogData)
 			{
 				brakeAnalogRadioButton.Checked = true;
 				prevBrakeKind = BrakeKind.BrakeAnalog;
@@ -491,12 +491,12 @@ class Stick3020: Form
 
 		TrainState trainState = TrainCrewInput.GetTrainState();
 		string carModel = trainState.CarStates.Count > 0 ? trainState.CarStates[0].CarModel : "";
-		if ("4000".Equals(carModel) || "4000R".Equals(carModel))
+		if (carModel == "4000" || carModel == "4000R")
 		{
 			autoBrakeKind = BrakeKind.Brake7Steps;
 			brakeAutoRadioButton.Text = string.Format("{0}：{1}", uiText.BrakeAuto, uiText.Brake7StepForAuto);
 		}
-		else if ("3020".Equals(carModel))
+		else if (carModel == "3020")
 		{
 			autoBrakeKind = BrakeKind.BrakeAnalog;
 			brakeAutoRadioButton.Text = string.Format("{0}：{1}", uiText.BrakeAuto, uiText.BrakeAnalogForAuto);
