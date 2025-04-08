@@ -639,8 +639,8 @@ class Stick3020: Form
 			// 90度 (0.5*PI) = ユルメ
 			// 180度 (PI) = 常用最大
 			// 225度 (1.25*PI) = 非常
-			double ebThreshold = 1.125 * Math.PI;
-			double ebHysteresisDelta = 0.125 * Math.PI * (double)(notchHysteresisNumericUpDown.Value / 100);
+			double ebThreshold = 1.25 * Math.PI;
+			double ebHysteresisDelta = 0.25 * Math.PI * (double)(notchHysteresisNumericUpDown.Value / 100);
 			if (currentBrakeKind == BrakeKind.BrakeAnalog)
 			{
 				if (prevBrakeKind == currentBrakeKind && prevBrakePressure.HasValue)
@@ -648,10 +648,6 @@ class Stick3020: Form
 					if (prevBrakePressure.Value > 405)
 					{
 						ebThreshold -= ebHysteresisDelta;
-					}
-					else
-					{
-						ebThreshold += ebHysteresisDelta;
 					}
 				}
 				if (brakeAngle <= 0.5 * Math.PI)
@@ -710,11 +706,7 @@ class Stick3020: Form
 							thresholds[i] += hysteresisDelta;
 						}
 					}
-					if (prevBrakeNotch.Value <= numBrakeSteps)
-					{
-						ebThreshold += ebHysteresisDelta;
-					}
-					else
+					if (prevBrakeNotch.Value > numBrakeSteps)
 					{
 						ebThreshold -= ebHysteresisDelta;
 					}
